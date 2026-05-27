@@ -8,9 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap">
-  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+  <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
   <style>
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: #0a0a0b; }
@@ -22,20 +21,44 @@
       font-family: 'Bebas Neue', sans-serif; font-size: 40px; letter-spacing: 3px;
       animation: bootpulse 1.5s ease-in-out infinite;
     }
+    .boot-error {
+      color: #fb7185; font-size: 14px; font-family: 'DM Sans', sans-serif;
+      letter-spacing: 0; padding: 20px; text-align: center; line-height: 1.5;
+    }
     @keyframes bootpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   </style>
 </head>
 <body>
   <div id="root"><div class="boot">DABOIZ</div></div>
-  <script type="text/babel" data-presets="react">
-const { useState, useEffect, useMemo, useCallback } = React;
+  <script>
+    // Fallback if React fails to load from CDN
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        if (typeof React === 'undefined') {
+          document.getElementById('root').innerHTML =
+            '<div class="boot"><div class="boot-error">' +
+            'Failed to load React from CDN.<br>' +
+            'Check your internet connection and refresh.<br><br>' +
+            'If problem persists, the CDN may be blocked.' +
+            '</div></div>';
+        }
+      }, 5000);
+    });
+  </script>
+  <script>
+const {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback
+} = React;
 
 // ---- Config ----
 const PLAYERS = ['Shanaka', 'Vidhur', 'Minhaz', 'Ayeed', 'Nirmal', 'Luwindu', 'Nipuna', 'Zemar', 'Varun'];
 const INITIAL_POINTS = 0;
-const WIN_BASE = 10;            // flat per win
-const LOSS_PENALTY = 10;        // deducted per loss when above floor
-const FLOOR = 100;              // can't be demoted below this once you're at/above it
+const WIN_BASE = 10; // flat per win
+const LOSS_PENALTY = 10; // deducted per loss when above floor
+const FLOOR = 100; // can't be demoted below this once you're at/above it
 
 const SUPABASE_URL = 'https://yhwnumvqvdixnbcejkkw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_V13Z2BB4rwWDpNeok90tlA_NjaiygsR';
@@ -46,10 +69,18 @@ const POLL_INTERVAL_MS = 15000;
 // ---- Helpers ----
 function freshState() {
   const players = {};
-  PLAYERS.forEach(p => { players[p] = { points: INITIAL_POINTS, wins: 0, losses: 0 }; });
-  return { players, games: [] };
+  PLAYERS.forEach(p => {
+    players[p] = {
+      points: INITIAL_POINTS,
+      wins: 0,
+      losses: 0
+    };
+  });
+  return {
+    players,
+    games: []
+  };
 }
-
 function winPoints(winnerScore, loserScore) {
   const margin = Math.max(0, (winnerScore || 0) - (loserScore || 0));
   return WIN_BASE + margin;
@@ -70,12 +101,10 @@ function getStreak(playerName, games) {
     const isWinner = g.winners.includes(playerName);
     const isLoser = g.losers.includes(playerName);
     if (!isWinner && !isLoser) continue;
-    if (isWinner) streak++;
-    else break;
+    if (isWinner) streak++;else break;
   }
   return streak;
 }
-
 function formatDate(ts) {
   const d = new Date(ts);
   const now = new Date();
@@ -87,25 +116,40 @@ function formatDate(ts) {
   if (diffMin < 60) return `${diffMin}m ago`;
   if (diffHr < 24) return `${diffHr}h ago`;
   if (diffDay < 7) return `${diffDay}d ago`;
-  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short'
+  });
 }
-
 function rankColor(rank) {
-  if (rank === 1) return { bg: '#fbbf24', text: '#0a0a0b' }; // gold
-  if (rank === 2) return { bg: '#d4d4d8', text: '#0a0a0b' }; // silver
-  if (rank === 3) return { bg: '#c2410c', text: '#fef3c7' }; // bronze
-  return { bg: '#26262b', text: '#a1a1aa' };
+  if (rank === 1) return {
+    bg: '#fbbf24',
+    text: '#0a0a0b'
+  }; // gold
+  if (rank === 2) return {
+    bg: '#d4d4d8',
+    text: '#0a0a0b'
+  }; // silver
+  if (rank === 3) return {
+    bg: '#c2410c',
+    text: '#fef3c7'
+  }; // bronze
+  return {
+    bg: '#26262b',
+    text: '#a1a1aa'
+  };
 }
 
 // ---- Supabase REST ----
 const SUPABASE_HEADERS = {
   'apikey': SUPABASE_KEY,
-  'Content-Type': 'application/json',
+  'Content-Type': 'application/json'
 };
-
 async function supabaseFetch() {
   const url = `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?id=eq.${ROW_ID}&select=data`;
-  const r = await fetch(url, { headers: SUPABASE_HEADERS });
+  const r = await fetch(url, {
+    headers: SUPABASE_HEADERS
+  });
   if (!r.ok) {
     const text = await r.text().catch(() => '');
     throw new Error(`HTTP ${r.status}: ${text.slice(0, 100)}`);
@@ -113,13 +157,18 @@ async function supabaseFetch() {
   const rows = await r.json();
   return rows[0]?.data || null;
 }
-
 async function supabasePush(data) {
   const url = `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?on_conflict=id`;
   const r = await fetch(url, {
     method: 'POST',
-    headers: { ...SUPABASE_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({ id: ROW_ID, data }),
+    headers: {
+      ...SUPABASE_HEADERS,
+      'Prefer': 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify({
+      id: ROW_ID,
+      data
+    })
   });
   if (!r.ok) {
     const text = await r.text().catch(() => '');
@@ -148,7 +197,6 @@ function App() {
     link.rel = 'stylesheet';
     link.href = 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap';
     document.head.appendChild(link);
-
     loadState();
 
     // Pull fresh data on focus and periodically while visible.
@@ -159,7 +207,11 @@ function App() {
         const data = await supabaseFetch();
         if (data && data.players) {
           PLAYERS.forEach(p => {
-            if (!data.players[p]) data.players[p] = { points: INITIAL_POINTS, wins: 0, losses: 0 };
+            if (!data.players[p]) data.players[p] = {
+              points: INITIAL_POINTS,
+              wins: 0,
+              losses: 0
+            };
           });
           if (!Array.isArray(data.games)) data.games = [];
           // Only swap in if it's actually different — avoid needless re-renders
@@ -175,7 +227,6 @@ function App() {
         console.warn('Background refresh failed:', e?.message);
       }
     }
-
     function startPoll() {
       if (pollTimer) return;
       pollTimer = setInterval(() => {
@@ -183,21 +234,26 @@ function App() {
       }, POLL_INTERVAL_MS);
     }
     function stopPoll() {
-      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
     }
-
-    const onFocus = () => { silentRefresh(); startPoll(); };
+    const onFocus = () => {
+      silentRefresh();
+      startPoll();
+    };
     const onBlur = () => stopPoll();
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') { silentRefresh(); startPoll(); }
-      else stopPoll();
+      if (document.visibilityState === 'visible') {
+        silentRefresh();
+        startPoll();
+      } else stopPoll();
     };
-
     window.addEventListener('focus', onFocus);
     window.addEventListener('blur', onBlur);
     document.addEventListener('visibilitychange', onVisibility);
     startPoll();
-
     return () => {
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('blur', onBlur);
@@ -205,7 +261,6 @@ function App() {
       stopPoll();
     };
   }, []);
-
   async function loadState() {
     if (typeof fetch === 'undefined') {
       setStorageAvailable(false);
@@ -218,7 +273,11 @@ function App() {
       const data = await supabaseFetch();
       if (data && data.players) {
         PLAYERS.forEach(p => {
-          if (!data.players[p]) data.players[p] = { points: INITIAL_POINTS, wins: 0, losses: 0 };
+          if (!data.players[p]) data.players[p] = {
+            points: INITIAL_POINTS,
+            wins: 0,
+            losses: 0
+          };
         });
         // Ensure games array exists
         if (!Array.isArray(data.games)) data.games = [];
@@ -238,8 +297,7 @@ function App() {
     }
     setLoading(false);
   }
-
-  const save = useCallback(async (newState) => {
+  const save = useCallback(async newState => {
     setState(newState);
     setSyncStatus('saving');
     let lastErr = null;
@@ -260,11 +318,9 @@ function App() {
     setLastError(msg);
     showToast(`Sync failed: ${msg.slice(0, 60)}`, 'error');
   }, []);
-
   const retrySync = useCallback(async () => {
     if (state) await save(state);
   }, [state, save]);
-
   function exportState() {
     if (!state) return '';
     try {
@@ -277,10 +333,12 @@ function App() {
       return '';
     }
   }
-
   async function copyExport() {
     const code = exportState();
-    if (!code) { showToast('Export failed', 'error'); return; }
+    if (!code) {
+      showToast('Export failed', 'error');
+      return;
+    }
     try {
       await navigator.clipboard.writeText(code);
       showToast(`Copied! (${code.length} chars) — paste in group chat`);
@@ -289,7 +347,6 @@ function App() {
       showToast('Clipboard blocked — view in Settings', 'error');
     }
   }
-
   function importState(code) {
     try {
       const trimmed = (code || '').trim();
@@ -301,7 +358,11 @@ function App() {
       }
       // Make sure all configured players exist
       PLAYERS.forEach(p => {
-        if (!parsed.players[p]) parsed.players[p] = { points: INITIAL_POINTS, wins: 0, losses: 0 };
+        if (!parsed.players[p]) parsed.players[p] = {
+          points: INITIAL_POINTS,
+          wins: 0,
+          losses: 0
+        };
       });
       setState(parsed);
       // Try to persist (won't hurt if storage is broken)
@@ -314,24 +375,25 @@ function App() {
       return false;
     }
   }
-
   function showToast(msg, kind = 'success') {
-    setToast({ msg, kind });
+    setToast({
+      msg,
+      kind
+    });
     setTimeout(() => setToast(null), 2500);
   }
-
   function logGame(winners, losers, winnerScore, loserScore) {
     const p = state.players;
     const pointsAwarded = winPoints(winnerScore, loserScore);
-
-    const newPlayers = { ...p };
+    const newPlayers = {
+      ...p
+    };
     const lossPenalties = {};
-
     winners.forEach(w => {
       newPlayers[w] = {
         ...newPlayers[w],
         points: newPlayers[w].points + pointsAwarded,
-        wins: newPlayers[w].wins + 1,
+        wins: newPlayers[w].wins + 1
       };
     });
     losers.forEach(l => {
@@ -340,30 +402,39 @@ function App() {
       newPlayers[l] = {
         ...newPlayers[l],
         points: newPlayers[l].points - penalty,
-        losses: newPlayers[l].losses + 1,
+        losses: newPlayers[l].losses + 1
       };
     });
-
     const game = {
-      id: Date.now(), timestamp: Date.now(),
-      winners, losers, pointsAwarded, lossPenalties, winnerScore, loserScore,
+      id: Date.now(),
+      timestamp: Date.now(),
+      winners,
+      losers,
+      pointsAwarded,
+      lossPenalties,
+      winnerScore,
+      loserScore
     };
-    const newState = { players: newPlayers, games: [...state.games, game] };
+    const newState = {
+      players: newPlayers,
+      games: [...state.games, game]
+    };
     save(newState);
     showToast(`${winnerScore}-${loserScore} logged · +${pointsAwarded} pts`);
     setTab('ranks');
   }
-
   function undoGame(gameId) {
     const game = state.games[state.games.length - 1];
     if (!game || game.id !== gameId) return;
-    const newPlayers = { ...state.players };
+    const newPlayers = {
+      ...state.players
+    };
     const pts = game.pointsAwarded || 0;
     game.winners.forEach(w => {
       newPlayers[w] = {
         ...newPlayers[w],
         points: Math.max(0, newPlayers[w].points - pts),
-        wins: newPlayers[w].wins - 1,
+        wins: newPlayers[w].wins - 1
       };
     });
     game.losers.forEach(l => {
@@ -371,178 +442,161 @@ function App() {
       newPlayers[l] = {
         ...newPlayers[l],
         points: newPlayers[l].points + penalty,
-        losses: newPlayers[l].losses - 1,
+        losses: newPlayers[l].losses - 1
       };
     });
-    const newState = { players: newPlayers, games: state.games.slice(0, -1) };
+    const newState = {
+      players: newPlayers,
+      games: state.games.slice(0, -1)
+    };
     save(newState);
     showToast('Last game undone');
   }
-
   function resetAll() {
     save(freshState());
     setShowSettings(false);
     showToast('Everything reset');
   }
-
   if (loading || !state) {
-    return (
-      <div style={styles.loadingScreen}>
-        <div style={styles.loadingPulse}>DABOIZ</div>
-      </div>
-    );
+    return /*#__PURE__*/React.createElement("div", {
+      style: styles.loadingScreen
+    }, /*#__PURE__*/React.createElement("div", {
+      style: styles.loadingPulse
+    }, "DABOIZ"));
   }
-
-  return (
-    <div style={styles.app}>
-      <style>{globalCss}</style>
-
-      {/* Header */}
-      <header style={styles.header}>
-        <div>
-          <div style={styles.headerTitle}>DABOIZ PADEL</div>
-          <div style={styles.headerSub}>The Group Chat Ladder</div>
-        </div>
-        <div style={styles.headerRight}>
-          {syncStatus === 'saving' && <div style={styles.savingDot} title="Saving…" />}
-          {syncStatus === 'failed' && (
-            <button style={styles.retryBtn} onClick={retrySync}>
-              <span style={styles.retryDot} />
-              RETRY
-            </button>
-          )}
-          <button style={styles.iconBtn} onClick={() => setShowSettings(true)} aria-label="Settings">⚙</button>
-        </div>
-      </header>
-
-      {/* Sync state banners */}
-      {syncStatus === 'failed' && (
-        <div style={styles.syncBanner}>
-          <div style={styles.syncBannerText}>
-            <strong>Couldn't reach the server.</strong> Your last change saved locally. Check your connection and retry, or use Export to back up.
-            {lastError && <div style={styles.syncBannerErr}>{lastError}</div>}
-          </div>
-          <div style={styles.syncBannerBtnCol}>
-            <button style={styles.syncBannerBtn} onClick={retrySync}>RETRY</button>
-            <button style={styles.syncBannerBtnGhost} onClick={copyExport}>EXPORT</button>
-          </div>
-        </div>
-      )}
-      {!storageAvailable && (
-        <div style={styles.syncBanner}>
-          <div style={styles.syncBannerText}>
-            <strong>Network unavailable.</strong> Can't reach the server.
-          </div>
-        </div>
-      )}
-
-      {/* Tab content */}
-      <main style={styles.main}>
-        {tab === 'ranks' && <RanksTab state={state} onPlayerTap={setDetailPlayer} />}
-        {tab === 'log' && <LogTab state={state} onLog={logGame} />}
-        {tab === 'stats' && <StatsTab state={state} />}
-        {tab === 'history' && <HistoryTab state={state} onUndo={undoGame} />}
-      </main>
-
-      {/* Bottom nav */}
-      <nav style={styles.nav}>
-        <NavBtn label="Ranks" icon="◆" active={tab === 'ranks'} onClick={() => setTab('ranks')} />
-        <NavBtn label="Log" icon="+" active={tab === 'log'} onClick={() => setTab('log')} primary />
-        <NavBtn label="Stats" icon="≡" active={tab === 'stats'} onClick={() => setTab('stats')} />
-        <NavBtn label="History" icon="⌖" active={tab === 'history'} onClick={() => setTab('history')} />
-      </nav>
-
-      {/* Toast */}
-      {toast && (
-        <div style={{ ...styles.toast, background: toast.kind === 'error' ? '#dc2626' : '#1a1a1f' }}>
-          {toast.msg}
-        </div>
-      )}
-
-      {/* Modals */}
-      {detailPlayer && <PlayerDetailModal player={detailPlayer} state={state} onClose={() => setDetailPlayer(null)} />}
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onReset={resetAll} gamesCount={state.games.length} syncStatus={syncStatus} lastError={lastError} onRetry={retrySync} onExport={() => { setShowSettings(false); setShowExport(true); }} onImport={() => { setShowSettings(false); setShowImport(true); }} />}
-      {showImport && <ImportModal onClose={() => setShowImport(false)} onImport={importState} />}
-      {showExport && <ExportModal onClose={() => setShowExport(false)} code={exportState()} />}
-    </div>
-  );
+  return /*#__PURE__*/React.createElement("div", {
+    style: styles.app
+  }, /*#__PURE__*/React.createElement("style", null, globalCss), /*#__PURE__*/React.createElement("header", {
+    style: styles.header
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: styles.headerTitle
+  }, "DABOIZ PADEL"), /*#__PURE__*/React.createElement("div", {
+    style: styles.headerSub
+  }, "The Group Chat Ladder")), /*#__PURE__*/React.createElement("div", {
+    style: styles.headerRight
+  }, syncStatus === 'saving' && /*#__PURE__*/React.createElement("div", {
+    style: styles.savingDot,
+    title: "Saving\u2026"
+  }), syncStatus === 'failed' && /*#__PURE__*/React.createElement("button", {
+    style: styles.retryBtn,
+    onClick: retrySync
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.retryDot
+  }), "RETRY"), /*#__PURE__*/React.createElement("button", {
+    style: styles.iconBtn,
+    onClick: () => setShowSettings(true),
+    "aria-label": "Settings"
+  }, "\u2699"))), syncStatus === 'failed' && /*#__PURE__*/React.createElement("div", {
+    style: styles.syncBanner
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.syncBannerText
+  }, /*#__PURE__*/React.createElement("strong", null, "Couldn't reach the server."), " Your last change saved locally. Check your connection and retry, or use Export to back up.", lastError && /*#__PURE__*/React.createElement("div", {
+    style: styles.syncBannerErr
+  }, lastError)), /*#__PURE__*/React.createElement("div", {
+    style: styles.syncBannerBtnCol
+  }, /*#__PURE__*/React.createElement("button", {
+    style: styles.syncBannerBtn,
+    onClick: retrySync
+  }, "RETRY"), /*#__PURE__*/React.createElement("button", {
+    style: styles.syncBannerBtnGhost,
+    onClick: copyExport
+  }, "EXPORT"))), !storageAvailable && /*#__PURE__*/React.createElement("div", {
+    style: styles.syncBanner
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.syncBannerText
+  }, /*#__PURE__*/React.createElement("strong", null, "Network unavailable."), " Can't reach the server.")), /*#__PURE__*/React.createElement("main", {
+    style: styles.main
+  }, tab === 'ranks' && /*#__PURE__*/React.createElement(RanksTab, {
+    state: state,
+    onPlayerTap: setDetailPlayer
+  }), tab === 'log' && /*#__PURE__*/React.createElement(LogTab, {
+    state: state,
+    onLog: logGame
+  }), tab === 'stats' && /*#__PURE__*/React.createElement(StatsTab, {
+    state: state
+  }), tab === 'history' && /*#__PURE__*/React.createElement(HistoryTab, {
+    state: state,
+    onUndo: undoGame
+  })), /*#__PURE__*/React.createElement("nav", {
+    style: styles.nav
+  }, /*#__PURE__*/React.createElement(NavBtn, {
+    label: "Ranks",
+    icon: "\u25C6",
+    active: tab === 'ranks',
+    onClick: () => setTab('ranks')
+  }), /*#__PURE__*/React.createElement(NavBtn, {
+    label: "Log",
+    icon: "+",
+    active: tab === 'log',
+    onClick: () => setTab('log'),
+    primary: true
+  }), /*#__PURE__*/React.createElement(NavBtn, {
+    label: "Stats",
+    icon: "\u2261",
+    active: tab === 'stats',
+    onClick: () => setTab('stats')
+  }), /*#__PURE__*/React.createElement(NavBtn, {
+    label: "History",
+    icon: "\u2316",
+    active: tab === 'history',
+    onClick: () => setTab('history')
+  })), toast && /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...styles.toast,
+      background: toast.kind === 'error' ? '#dc2626' : '#1a1a1f'
+    }
+  }, toast.msg), detailPlayer && /*#__PURE__*/React.createElement(PlayerDetailModal, {
+    player: detailPlayer,
+    state: state,
+    onClose: () => setDetailPlayer(null)
+  }), showSettings && /*#__PURE__*/React.createElement(SettingsModal, {
+    onClose: () => setShowSettings(false),
+    onReset: resetAll,
+    gamesCount: state.games.length,
+    syncStatus: syncStatus,
+    lastError: lastError,
+    onRetry: retrySync,
+    onExport: () => {
+      setShowSettings(false);
+      setShowExport(true);
+    },
+    onImport: () => {
+      setShowSettings(false);
+      setShowImport(true);
+    }
+  }), showImport && /*#__PURE__*/React.createElement(ImportModal, {
+    onClose: () => setShowImport(false),
+    onImport: importState
+  }), showExport && /*#__PURE__*/React.createElement(ExportModal, {
+    onClose: () => setShowExport(false),
+    code: exportState()
+  }));
 }
 
 // ---- Tabs ----
 
-function RanksTab({ state, onPlayerTap }) {
-  const { active, dormant } = useMemo(() => {
-    const all = PLAYERS.map(name => ({ name, ...state.players[name] }));
-    const a = all.filter(p => (p.wins + p.losses) > 0).sort((x, y) => y.points - x.points);
-    const d = all.filter(p => (p.wins + p.losses) === 0);
-    return { active: a, dormant: d };
+function RanksTab({
+  state,
+  onPlayerTap
+}) {
+  const {
+    active,
+    dormant
+  } = useMemo(() => {
+    const all = PLAYERS.map(name => ({
+      name,
+      ...state.players[name]
+    }));
+    const a = all.filter(p => p.wins + p.losses > 0).sort((x, y) => y.points - x.points);
+    const d = all.filter(p => p.wins + p.losses === 0);
+    return {
+      active: a,
+      dormant: d
+    };
   }, [state]);
-
   const totalGames = state.games.length;
-
-  return (
-    <div style={styles.tabPad}>
-      <div style={styles.sectionMeta}>
-        <span>{active.length} active</span>
-        <span>·</span>
-        <span>{totalGames} {totalGames === 1 ? 'game' : 'games'}</span>
-      </div>
-
-      {active.length > 0 ? (
-        <div style={styles.rankList}>
-          {active.map((p, i) => {
-            const rank = i + 1;
-            const rc = rankColor(rank);
-            const games = p.wins + p.losses;
-            const winRate = games > 0 ? Math.round((p.wins / games) * 100) : 0;
-            const streak = getStreak(p.name, state.games);
-            return (
-              <button key={p.name} style={styles.rankCard} onClick={() => onPlayerTap(p.name)}>
-                <div style={{ ...styles.rankBadge, background: rc.bg, color: rc.text }}>{rank}</div>
-                <div style={styles.rankBody}>
-                  <div style={styles.rankNameRow}>
-                    <span style={styles.rankName}>{p.name}</span>
-                    {streak >= 2 && <span style={styles.streakBadge}>🔥{streak}</span>}
-                  </div>
-                  <div style={styles.rankMeta}>
-                    <span style={styles.winText}>{p.wins}W</span>
-                    <span style={styles.divider}>·</span>
-                    <span style={styles.lossText}>{p.losses}L</span>
-                    <span style={styles.divider}>·</span>
-                    <span style={styles.mutedSm}>{winRate}%</span>
-                  </div>
-                </div>
-                <div style={styles.rankElo}>{p.points}</div>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div style={styles.emptyState}>
-          No one's played yet.<br />Be the first to log a game.
-        </div>
-      )}
-
-      {dormant.length > 0 && (
-        <>
-          <div style={styles.dormantHeader}>
-            <span>YET TO PLAY</span>
-            <span style={styles.dormantCount}>{dormant.length}</span>
-          </div>
-          <div style={styles.dormantList}>
-            {dormant.map(p => (
-              <button key={p.name} style={styles.dormantCard} onClick={() => onPlayerTap(p.name)}>
-                <div style={styles.dormantDot} />
-                <div style={styles.dormantName}>{p.name}</div>
-                <div style={styles.dormantElo}>{p.points}</div>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function LogTab({ state, onLog }) {
-    
+  return /*#__PURE__*/React.createElement("div", {
+    style: styles.tabPad
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.sectionMeta
+  }, /*#__PURE__*/React.createElement("span", null, active.length, " active"), /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, totalGames, " ", totalGames === 1 ? 'game' : 'games')), active.length >
