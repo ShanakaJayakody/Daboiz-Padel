@@ -599,4 +599,1935 @@ function RanksTab({
     style: styles.tabPad
   }, /*#__PURE__*/React.createElement("div", {
     style: styles.sectionMeta
-  }, /*#__PURE__*/React.createElement("span", null, active.length, " active"), /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, totalGames, " ", totalGames === 1 ? 'game' : 'games')), active.length >
+  }, /*#__PURE__*/React.createElement("span", null, active.length, " active"), /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, totalGames, " ", totalGames === 1 ? 'game' : 'games')), active.length > 0 ? /*#__PURE__*/React.createElement("div", {
+    style: styles.rankList
+  }, active.map((p, i) => {
+    const rank = i + 1;
+    const rc = rankColor(rank);
+    const games = p.wins + p.losses;
+    const winRate = games > 0 ? Math.round(p.wins / games * 100) : 0;
+    const streak = getStreak(p.name, state.games);
+    return /*#__PURE__*/React.createElement("button", {
+      key: p.name,
+      style: styles.rankCard,
+      onClick: () => onPlayerTap(p.name)
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...styles.rankBadge,
+        background: rc.bg,
+        color: rc.text
+      }
+    }, rank), /*#__PURE__*/React.createElement("div", {
+      style: styles.rankBody
+    }, /*#__PURE__*/React.createElement("div", {
+      style: styles.rankNameRow
+    }, /*#__PURE__*/React.createElement("span", {
+      style: styles.rankName
+    }, p.name), streak >= 2 && /*#__PURE__*/React.createElement("span", {
+      style: styles.streakBadge
+    }, "\uD83D\uDD25", streak)), /*#__PURE__*/React.createElement("div", {
+      style: styles.rankMeta
+    }, /*#__PURE__*/React.createElement("span", {
+      style: styles.winText
+    }, p.wins, "W"), /*#__PURE__*/React.createElement("span", {
+      style: styles.divider
+    }, "\xB7"), /*#__PURE__*/React.createElement("span", {
+      style: styles.lossText
+    }, p.losses, "L"), /*#__PURE__*/React.createElement("span", {
+      style: styles.divider
+    }, "\xB7"), /*#__PURE__*/React.createElement("span", {
+      style: styles.mutedSm
+    }, winRate, "%"))), /*#__PURE__*/React.createElement("div", {
+      style: styles.rankElo
+    }, p.points));
+  })) : /*#__PURE__*/React.createElement("div", {
+    style: styles.emptyState
+  }, "No one's played yet.", /*#__PURE__*/React.createElement("br", null), "Be the first to log a game."), dormant.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: styles.dormantHeader
+  }, /*#__PURE__*/React.createElement("span", null, "YET TO PLAY"), /*#__PURE__*/React.createElement("span", {
+    style: styles.dormantCount
+  }, dormant.length)), /*#__PURE__*/React.createElement("div", {
+    style: styles.dormantList
+  }, dormant.map(p => /*#__PURE__*/React.createElement("button", {
+    key: p.name,
+    style: styles.dormantCard,
+    onClick: () => onPlayerTap(p.name)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.dormantDot
+  }), /*#__PURE__*/React.createElement("div", {
+    style: styles.dormantName
+  }, p.name), /*#__PURE__*/React.createElement("div", {
+    style: styles.dormantElo
+  }, p.points))))));
+}
+function LogTab({
+  state,
+  onLog
+}) {
+  const [slots, setSlots] = useState([null, null, null, null]); // [W1, W2, L1, L2]
+  const [activeSlot, setActiveSlot] = useState(0);
+  const [winnerScore, setWinnerScore] = useState(0);
+  const [loserScore, setLoserScore] = useState(0);
+  const used = new Set(slots.filter(Boolean));
+  const allFilled = slots.every(Boolean);
+  const scoreValid = winnerScore > loserScore;
+  const canSubmit = allFilled && scoreValid;
+  const preview = useMemo(() => {
+    if (!allFilled || !scoreValid) return null;
+    const p = state.players;
+    const pts = winPoints(winnerScore, loserScore);
+    const lossA = lossPenaltyFor(p[slots[2]].points);
+    const lossB = lossPenaltyFor(p[slots[3]].points);
+    return {
+      pts,
+      lossA,
+      lossB
+    };
+  }, [slots, allFilled, scoreValid, winnerScore, loserScore, state]);
+  function assignToSlot(name) {
+    if (used.has(name)) {
+      const idx = slots.indexOf(name);
+      const next = [...slots];
+      next[idx] = null;
+      setSlots(next);
+      setActiveSlot(idx);
+      return;
+    }
+    const next = [...slots];
+    next[activeSlot] = name;
+    setSlots(next);
+    const nextEmpty = next.findIndex(s => !s);
+    if (nextEmpty !== -1) setActiveSlot(nextEmpty);
+  }
+  function clearSlot(i) {
+    const next = [...slots];
+    next[i] = null;
+    setSlots(next);
+    setActiveSlot(i);
+  }
+  function handleSubmit() {
+    if (!canSubmit) return;
+    onLog([slots[0], slots[1]], [slots[2], slots[3]], winnerScore, loserScore);
+    setSlots([null, null, null, null]);
+    setActiveSlot(0);
+    setWinnerScore(0);
+    setLoserScore(0);
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: styles.tabPad
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.logSection
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.logLabel
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.logLabelDotW
+  }), "WINNERS"), /*#__PURE__*/React.createElement("div", {
+    style: styles.slotRow
+  }, /*#__PURE__*/React.createElement(Slot, {
+    value: slots[0],
+    active: activeSlot === 0,
+    onTap: () => setActiveSlot(0),
+    onClear: () => clearSlot(0),
+    kind: "win"
+  }), /*#__PURE__*/React.createElement(Slot, {
+    value: slots[1],
+    active: activeSlot === 1,
+    onTap: () => setActiveSlot(1),
+    onClear: () => clearSlot(1),
+    kind: "win"
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: styles.logSection
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.logLabel
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.logLabelDotL
+  }), "LOSERS"), /*#__PURE__*/React.createElement("div", {
+    style: styles.slotRow
+  }, /*#__PURE__*/React.createElement(Slot, {
+    value: slots[2],
+    active: activeSlot === 2,
+    onTap: () => setActiveSlot(2),
+    onClear: () => clearSlot(2),
+    kind: "loss"
+  }), /*#__PURE__*/React.createElement(Slot, {
+    value: slots[3],
+    active: activeSlot === 3,
+    onTap: () => setActiveSlot(3),
+    onClear: () => clearSlot(3),
+    kind: "loss"
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: styles.pickerLabel
+  }, used.size < 4 ? `Tap a player for slot ${activeSlot + 1}` : 'All slots filled'), /*#__PURE__*/React.createElement("div", {
+    style: styles.playerGrid
+  }, PLAYERS.map(name => {
+    const isUsed = used.has(name);
+    const slotIdx = slots.indexOf(name);
+    const isWinner = slotIdx === 0 || slotIdx === 1;
+    return /*#__PURE__*/React.createElement("button", {
+      key: name,
+      style: {
+        ...styles.playerChip,
+        ...(isUsed ? isWinner ? styles.playerChipWin : styles.playerChipLoss : {})
+      },
+      onClick: () => assignToSlot(name)
+    }, name);
+  })), /*#__PURE__*/React.createElement("div", {
+    style: styles.scoreSection
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.pickerLabel
+  }, "FINAL SCORE (games won)"), /*#__PURE__*/React.createElement("div", {
+    style: styles.scoreRow
+  }, /*#__PURE__*/React.createElement(ScoreStepper, {
+    label: "WIN",
+    kind: "win",
+    value: winnerScore,
+    onChange: setWinnerScore
+  }), /*#__PURE__*/React.createElement("div", {
+    style: styles.scoreDash
+  }, "\u2014"), /*#__PURE__*/React.createElement(ScoreStepper, {
+    label: "LOSS",
+    kind: "loss",
+    value: loserScore,
+    onChange: setLoserScore
+  })), allFilled && !scoreValid && /*#__PURE__*/React.createElement("div", {
+    style: styles.scoreHint
+  }, "Winners' score must be higher than losers'.")), canSubmit && preview && /*#__PURE__*/React.createElement("div", {
+    style: styles.previewBox
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.previewLine
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.winText
+  }, slots[0], " & ", slots[1]), /*#__PURE__*/React.createElement("span", {
+    style: styles.previewDelta
+  }, "+", preview.pts)), /*#__PURE__*/React.createElement("div", {
+    style: styles.previewLine
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.lossText
+  }, slots[2]), /*#__PURE__*/React.createElement("span", {
+    style: preview.lossA > 0 ? styles.previewDeltaNeg : styles.previewDeltaZero
+  }, preview.lossA > 0 ? `−${preview.lossA}` : '0')), /*#__PURE__*/React.createElement("div", {
+    style: styles.previewLine
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.lossText
+  }, slots[3]), /*#__PURE__*/React.createElement("span", {
+    style: preview.lossB > 0 ? styles.previewDeltaNeg : styles.previewDeltaZero
+  }, preview.lossB > 0 ? `−${preview.lossB}` : '0'))), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...styles.submitBtn,
+      ...(canSubmit ? {} : styles.submitBtnDisabled)
+    },
+    onClick: handleSubmit,
+    disabled: !canSubmit
+  }, "LOG GAME"));
+}
+function ScoreStepper({
+  label,
+  kind,
+  value,
+  onChange
+}) {
+  const accent = kind === 'win' ? '#D4FF3D' : '#fb7185';
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...styles.scoreBox,
+      borderColor: value > 0 ? accent : '#26262b'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...styles.scoreLabel,
+      color: accent
+    }
+  }, label), /*#__PURE__*/React.createElement("div", {
+    style: styles.scoreNum
+  }, value), /*#__PURE__*/React.createElement("div", {
+    style: styles.scoreBtnRow
+  }, /*#__PURE__*/React.createElement("button", {
+    style: styles.scoreBtn,
+    onClick: () => onChange(Math.max(0, value - 1)),
+    disabled: value === 0
+  }, "\u2212"), /*#__PURE__*/React.createElement("button", {
+    style: styles.scoreBtn,
+    onClick: () => onChange(value + 1)
+  }, "+")));
+}
+function Slot({
+  value,
+  active,
+  onTap,
+  onClear,
+  kind
+}) {
+  const baseColor = kind === 'win' ? '#D4FF3D' : '#fb7185';
+  return /*#__PURE__*/React.createElement("button", {
+    onClick: value ? onClear : onTap,
+    style: {
+      ...styles.slot,
+      borderColor: active ? baseColor : '#26262b',
+      background: value ? kind === 'win' ? 'rgba(212,255,61,0.08)' : 'rgba(251,113,133,0.08)' : '#131316'
+    }
+  }, value ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      ...styles.slotName,
+      color: '#f5f5f4'
+    }
+  }, value), /*#__PURE__*/React.createElement("span", {
+    style: styles.slotClear
+  }, "\xD7")) : /*#__PURE__*/React.createElement("span", {
+    style: styles.slotEmpty
+  }, "+ ADD"));
+}
+function StatsTab({
+  state
+}) {
+  const [view, setView] = useState('h2h');
+  const [focusPlayer, setFocusPlayer] = useState(PLAYERS[0]);
+  const h2h = useMemo(() => {
+    // h2h[A][B] = times A beat B
+    const m = {};
+    PLAYERS.forEach(a => {
+      m[a] = {};
+      PLAYERS.forEach(b => {
+        m[a][b] = 0;
+      });
+    });
+    state.games.forEach(g => {
+      g.winners.forEach(w => g.losers.forEach(l => {
+        m[w][l]++;
+      }));
+    });
+    return m;
+  }, [state]);
+  const partnerships = useMemo(() => {
+    const map = {};
+    function key(a, b) {
+      return [a, b].sort().join('|');
+    }
+    state.games.forEach(g => {
+      const wk = key(g.winners[0], g.winners[1]);
+      const lk = key(g.losers[0], g.losers[1]);
+      if (!map[wk]) map[wk] = {
+        pair: wk.split('|'),
+        wins: 0,
+        losses: 0
+      };
+      if (!map[lk]) map[lk] = {
+        pair: lk.split('|'),
+        wins: 0,
+        losses: 0
+      };
+      map[wk].wins++;
+      map[lk].losses++;
+    });
+    return Object.values(map).map(p => ({
+      ...p,
+      games: p.wins + p.losses,
+      winRate: p.wins / (p.wins + p.losses)
+    })).sort((a, b) => {
+      if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+      return b.games - a.games;
+    });
+  }, [state]);
+  return /*#__PURE__*/React.createElement("div", {
+    style: styles.tabPad
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.segmented
+  }, /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...styles.segBtn,
+      ...(view === 'h2h' ? styles.segBtnActive : {})
+    },
+    onClick: () => setView('h2h')
+  }, "HEAD-TO-HEAD"), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...styles.segBtn,
+      ...(view === 'pairs' ? styles.segBtnActive : {})
+    },
+    onClick: () => setView('pairs')
+  }, "PARTNERSHIPS")), view === 'h2h' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: styles.h2hPickerLabel
+  }, "SHOWING"), /*#__PURE__*/React.createElement("div", {
+    style: styles.h2hPicker
+  }, PLAYERS.map(p => /*#__PURE__*/React.createElement("button", {
+    key: p,
+    onClick: () => setFocusPlayer(p),
+    style: {
+      ...styles.h2hChip,
+      ...(focusPlayer === p ? styles.h2hChipActive : {})
+    }
+  }, p))), /*#__PURE__*/React.createElement("div", {
+    style: styles.h2hList
+  }, PLAYERS.filter(p => p !== focusPlayer).map(opp => ({
+    name: opp,
+    won: h2h[focusPlayer][opp],
+    lost: h2h[opp][focusPlayer]
+  })).sort((a, b) => b.won + b.lost - (a.won + a.lost)).map(row => {
+    const total = row.won + row.lost;
+    return /*#__PURE__*/React.createElement("div", {
+      key: row.name,
+      style: styles.h2hRow
+    }, /*#__PURE__*/React.createElement("div", {
+      style: styles.h2hOpp
+    }, "vs ", row.name), /*#__PURE__*/React.createElement("div", {
+      style: styles.h2hScores
+    }, /*#__PURE__*/React.createElement("span", {
+      style: styles.winText
+    }, row.won), /*#__PURE__*/React.createElement("span", {
+      style: styles.h2hDash
+    }, "\u2014"), /*#__PURE__*/React.createElement("span", {
+      style: styles.lossText
+    }, row.lost)), /*#__PURE__*/React.createElement("div", {
+      style: styles.h2hBar
+    }, total > 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...styles.h2hBarWin,
+        flex: row.won
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...styles.h2hBarLoss,
+        flex: row.lost
+      }
+    })) : /*#__PURE__*/React.createElement("div", {
+      style: styles.h2hBarEmpty
+    }, "no games yet")));
+  }))), view === 'pairs' && /*#__PURE__*/React.createElement("div", {
+    style: styles.pairsList
+  }, partnerships.length === 0 && /*#__PURE__*/React.createElement("div", {
+    style: styles.emptyState
+  }, "No games logged yet \u2014 log some to see the best partnerships."), partnerships.map((p, i) => /*#__PURE__*/React.createElement("div", {
+    key: p.pair.join('|'),
+    style: styles.pairRow
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.pairRank
+  }, i + 1), /*#__PURE__*/React.createElement("div", {
+    style: styles.pairBody
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.pairNames
+  }, p.pair[0], " & ", p.pair[1]), /*#__PURE__*/React.createElement("div", {
+    style: styles.pairMeta
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.winText
+  }, p.wins, "W"), /*#__PURE__*/React.createElement("span", {
+    style: styles.divider
+  }, "\xB7"), /*#__PURE__*/React.createElement("span", {
+    style: styles.lossText
+  }, p.losses, "L"), /*#__PURE__*/React.createElement("span", {
+    style: styles.divider
+  }, "\xB7"), /*#__PURE__*/React.createElement("span", {
+    style: styles.mutedSm
+  }, p.games, " ", p.games === 1 ? 'game' : 'games'))), /*#__PURE__*/React.createElement("div", {
+    style: styles.pairWinRate
+  }, Math.round(p.winRate * 100), "%")))));
+}
+function HistoryTab({
+  state,
+  onUndo
+}) {
+  const games = [...state.games].reverse();
+  if (games.length === 0) {
+    return /*#__PURE__*/React.createElement("div", {
+      style: styles.tabPad
+    }, /*#__PURE__*/React.createElement("div", {
+      style: styles.emptyState
+    }, "No games logged yet.", /*#__PURE__*/React.createElement("br", null), "Head to Log to record your first one."));
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: styles.tabPad
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.historyList
+  }, games.map((g, idx) => {
+    const pts = g.pointsAwarded ?? 0;
+    const totalLost = g.lossPenalties ? Object.values(g.lossPenalties).reduce((a, b) => a + b, 0) : 0;
+    return /*#__PURE__*/React.createElement("div", {
+      key: g.id,
+      style: styles.historyCard
+    }, /*#__PURE__*/React.createElement("div", {
+      style: styles.historyHead
+    }, /*#__PURE__*/React.createElement("span", {
+      style: styles.historyTime
+    }, formatDate(g.timestamp)), g.winnerScore != null && g.loserScore != null && /*#__PURE__*/React.createElement("span", {
+      style: styles.historyScore
+    }, g.winnerScore, /*#__PURE__*/React.createElement("span", {
+      style: styles.historyScoreDash
+    }, "\u2013"), g.loserScore), /*#__PURE__*/React.createElement("span", {
+      style: styles.historyDelta
+    }, "+", pts)), /*#__PURE__*/React.createElement("div", {
+      style: styles.historyTeams
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...styles.historyTeam,
+        ...styles.historyTeamWin
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: styles.historyTeamTag
+    }, "WIN"), /*#__PURE__*/React.createElement("div", null, g.winners[0], " & ", g.winners[1])), /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...styles.historyTeam,
+        ...styles.historyTeamLoss
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: styles.historyTeamTag
+    }, "LOSS"), /*#__PURE__*/React.createElement("div", null, g.losers[0], " & ", g.losers[1]))), totalLost > 0 && /*#__PURE__*/React.createElement("div", {
+      style: styles.historyBadgeRow
+    }, /*#__PURE__*/React.createElement("span", {
+      style: styles.historyPenalty
+    }, g.losers.map(l => `${l} −${g.lossPenalties[l] || 0}`).filter(s => !s.endsWith('−0')).join(' · '))), idx === 0 && /*#__PURE__*/React.createElement("button", {
+      style: styles.undoBtn,
+      onClick: () => onUndo(g.id)
+    }, "\u21B6 Undo last game"));
+  })));
+}
+
+// ---- Modals ----
+
+function PlayerDetailModal({
+  player,
+  state,
+  onClose
+}) {
+  const p = state.players[player];
+  const games = p.wins + p.losses;
+  const winRate = games > 0 ? Math.round(p.wins / games * 100) : 0;
+
+  // Best partner & worst opponent
+  const partners = {};
+  const oppRecord = {};
+  state.games.forEach(g => {
+    const isWinner = g.winners.includes(player);
+    const isLoser = g.losers.includes(player);
+    if (!isWinner && !isLoser) return;
+    const teammates = isWinner ? g.winners.filter(x => x !== player) : g.losers.filter(x => x !== player);
+    const opponents = isWinner ? g.losers : g.winners;
+    teammates.forEach(t => {
+      if (!partners[t]) partners[t] = {
+        wins: 0,
+        losses: 0
+      };
+      if (isWinner) partners[t].wins++;else partners[t].losses++;
+    });
+    opponents.forEach(o => {
+      if (!oppRecord[o]) oppRecord[o] = {
+        wins: 0,
+        losses: 0
+      };
+      if (isWinner) oppRecord[o].wins++;else oppRecord[o].losses++;
+    });
+  });
+  const partnerList = Object.entries(partners).map(([n, r]) => ({
+    name: n,
+    ...r,
+    games: r.wins + r.losses,
+    rate: r.wins / (r.wins + r.losses)
+  })).sort((a, b) => b.rate - a.rate || b.games - a.games);
+  const oppList = Object.entries(oppRecord).map(([n, r]) => ({
+    name: n,
+    ...r,
+    games: r.wins + r.losses,
+    rate: r.wins / (r.wins + r.losses)
+  })).sort((a, b) => b.rate - a.rate || b.games - a.games);
+  return /*#__PURE__*/React.createElement("div", {
+    style: styles.modalOverlay,
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalSheet,
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalGrabber
+  }), /*#__PURE__*/React.createElement("div", {
+    style: styles.modalHead
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalName
+  }, player), /*#__PURE__*/React.createElement("div", {
+    style: styles.modalMetaLine
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.winText
+  }, p.wins, "W"), /*#__PURE__*/React.createElement("span", {
+    style: styles.divider
+  }, "\xB7"), /*#__PURE__*/React.createElement("span", {
+    style: styles.lossText
+  }, p.losses, "L"), games > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: styles.divider
+  }, "\xB7"), /*#__PURE__*/React.createElement("span", null, winRate, "% win rate")))), /*#__PURE__*/React.createElement("div", {
+    style: styles.modalElo
+  }, p.points)), partnerList.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: styles.modalSection
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalSectionTitle
+  }, "PARTNERS"), partnerList.map(t => /*#__PURE__*/React.createElement("div", {
+    key: t.name,
+    style: styles.modalRow
+  }, /*#__PURE__*/React.createElement("span", null, t.name), /*#__PURE__*/React.createElement("span", {
+    style: styles.mutedSm
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.winText
+  }, t.wins, "W"), ' / ', /*#__PURE__*/React.createElement("span", {
+    style: styles.lossText
+  }, t.losses, "L"))))), oppList.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: styles.modalSection
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalSectionTitle
+  }, "VS OPPONENTS"), oppList.map(t => /*#__PURE__*/React.createElement("div", {
+    key: t.name,
+    style: styles.modalRow
+  }, /*#__PURE__*/React.createElement("span", null, t.name), /*#__PURE__*/React.createElement("span", {
+    style: styles.mutedSm
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.winText
+  }, t.wins, "W"), ' / ', /*#__PURE__*/React.createElement("span", {
+    style: styles.lossText
+  }, t.losses, "L"))))), games === 0 && /*#__PURE__*/React.createElement("div", {
+    style: styles.emptyState
+  }, "No games yet for ", player, "."), /*#__PURE__*/React.createElement("button", {
+    style: styles.modalClose,
+    onClick: onClose
+  }, "CLOSE")));
+}
+function ExportModal({
+  onClose,
+  code
+}) {
+  const [copied, setCopied] = useState(false);
+  async function doCopy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (e) {
+      // ignore, user can manually select
+    }
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: styles.modalOverlay,
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalSheet,
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalGrabber
+  }), /*#__PURE__*/React.createElement("div", {
+    style: styles.modalHead
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalName
+  }, "EXPORT")), /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsNote
+  }, "Copy this code, paste in the group chat. Anyone can open the link and tap Import to load it."), /*#__PURE__*/React.createElement("textarea", {
+    value: code,
+    readOnly: true,
+    style: styles.codeBox,
+    onFocus: e => e.target.select()
+  }), /*#__PURE__*/React.createElement("div", {
+    style: styles.exportMeta
+  }, code.length, " characters"), /*#__PURE__*/React.createElement("button", {
+    style: styles.submitBtn,
+    onClick: doCopy
+  }, copied ? 'COPIED ✓' : 'COPY TO CLIPBOARD'), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...styles.modalClose,
+      marginTop: 12
+    },
+    onClick: onClose
+  }, "CLOSE")));
+}
+function ImportModal({
+  onClose,
+  onImport
+}) {
+  const [code, setCode] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  function handleImport() {
+    if (!code.trim()) return;
+    if (onImport(code)) {
+      onClose();
+    }
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: styles.modalOverlay,
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalSheet,
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalGrabber
+  }), /*#__PURE__*/React.createElement("div", {
+    style: styles.modalHead
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalName
+  }, "IMPORT")), /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsNote
+  }, "Paste an export code below. This will replace all current data."), /*#__PURE__*/React.createElement("textarea", {
+    value: code,
+    onChange: e => setCode(e.target.value),
+    placeholder: "PADEL:...",
+    style: styles.codeBox,
+    autoFocus: true
+  }), !confirming ? /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...styles.submitBtn,
+      ...(code.trim() ? {} : styles.submitBtnDisabled)
+    },
+    onClick: () => code.trim() && setConfirming(true),
+    disabled: !code.trim()
+  }, "IMPORT") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: styles.confirmText
+  }, "This replaces all current data. Continue?"), /*#__PURE__*/React.createElement("div", {
+    style: styles.confirmRow
+  }, /*#__PURE__*/React.createElement("button", {
+    style: styles.modalClose,
+    onClick: () => setConfirming(false)
+  }, "CANCEL"), /*#__PURE__*/React.createElement("button", {
+    style: styles.dangerBtnConfirm,
+    onClick: handleImport
+  }, "YES, IMPORT"))), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...styles.modalClose,
+      marginTop: 12
+    },
+    onClick: onClose
+  }, "CLOSE")));
+}
+function SettingsModal({
+  onClose,
+  onReset,
+  gamesCount,
+  syncStatus,
+  lastError,
+  onRetry,
+  onExport,
+  onImport
+}) {
+  const [confirming, setConfirming] = useState(false);
+  return /*#__PURE__*/React.createElement("div", {
+    style: styles.modalOverlay,
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalSheet,
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalGrabber
+  }), /*#__PURE__*/React.createElement("div", {
+    style: styles.modalHead
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.modalName
+  }, "SETTINGS")), syncStatus === 'failed' && /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsSyncBox
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsSyncTitle
+  }, "SYNC FAILED"), /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsSyncMsg
+  }, lastError || 'Unknown error'), /*#__PURE__*/React.createElement("button", {
+    style: styles.settingsSyncBtn,
+    onClick: onRetry
+  }, "RETRY SYNC")), /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsActionRow
+  }, /*#__PURE__*/React.createElement("button", {
+    style: styles.settingsActionBtn,
+    onClick: onExport
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.settingsActionIcon
+  }, "\u2197"), " EXPORT"), /*#__PURE__*/React.createElement("button", {
+    style: styles.settingsActionBtn,
+    onClick: onImport
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.settingsActionIcon
+  }, "\u2199"), " IMPORT")), /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsInfo
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsRow
+  }, /*#__PURE__*/React.createElement("span", null, "Games logged"), /*#__PURE__*/React.createElement("span", null, gamesCount)), /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsRow
+  }, /*#__PURE__*/React.createElement("span", null, "Starting points"), /*#__PURE__*/React.createElement("span", null, INITIAL_POINTS)), /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsRow
+  }, /*#__PURE__*/React.createElement("span", null, "Per win"), /*#__PURE__*/React.createElement("span", null, "+", WIN_BASE, " + margin")), /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsRow
+  }, /*#__PURE__*/React.createElement("span", null, "Per loss (\u2264 ", FLOOR, " pts)"), /*#__PURE__*/React.createElement("span", null, "no penalty")), /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsRow
+  }, /*#__PURE__*/React.createElement("span", null, "Per loss (> ", FLOOR, " pts)"), /*#__PURE__*/React.createElement("span", null, "\u2212", LOSS_PENALTY, ", floor ", FLOOR))), /*#__PURE__*/React.createElement("div", {
+    style: styles.settingsNote
+  }, "Each win = ", WIN_BASE, " points + 1 per game won by (e.g. 6-3 = +", WIN_BASE + 3, "). Climb to ", FLOOR, " without losing points. Once you're above ", FLOOR, ", each loss costs ", LOSS_PENALTY, " \u2014 but you can never drop below ", FLOOR, " again."), !confirming ? /*#__PURE__*/React.createElement("button", {
+    style: styles.dangerBtn,
+    onClick: () => setConfirming(true)
+  }, "RESET ALL DATA") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: styles.confirmText
+  }, "This will wipe all ELO, wins, losses, and history. Sure?"), /*#__PURE__*/React.createElement("div", {
+    style: styles.confirmRow
+  }, /*#__PURE__*/React.createElement("button", {
+    style: styles.modalClose,
+    onClick: () => setConfirming(false)
+  }, "CANCEL"), /*#__PURE__*/React.createElement("button", {
+    style: styles.dangerBtnConfirm,
+    onClick: onReset
+  }, "YES, RESET"))), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...styles.modalClose,
+      marginTop: 12
+    },
+    onClick: onClose
+  }, "CLOSE")));
+}
+
+// ---- Nav button ----
+function NavBtn({
+  label,
+  icon,
+  active,
+  onClick,
+  primary
+}) {
+  return /*#__PURE__*/React.createElement("button", {
+    onClick: onClick,
+    style: {
+      ...styles.navBtn,
+      ...(active ? styles.navBtnActive : {}),
+      ...(primary && active ? styles.navBtnPrimaryActive : {}),
+      ...(primary ? styles.navBtnPrimary : {})
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: styles.navIcon
+  }, icon), /*#__PURE__*/React.createElement("span", {
+    style: styles.navLabel
+  }, label));
+}
+
+// ---- Styles ----
+const globalCss = `
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: #0a0a0b; }
+  button { font-family: 'DM Sans', system-ui, sans-serif; cursor: pointer; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+`;
+const styles = {
+  app: {
+    fontFamily: "'DM Sans', system-ui, sans-serif",
+    background: '#0a0a0b',
+    color: '#f5f5f4',
+    minHeight: '100vh',
+    maxWidth: 480,
+    margin: '0 auto',
+    paddingBottom: 96,
+    position: 'relative'
+  },
+  loadingScreen: {
+    minHeight: '100vh',
+    background: '#0a0a0b',
+    color: '#D4FF3D',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 48,
+    letterSpacing: 4
+  },
+  loadingPulse: {
+    animation: 'pulse 1.5s infinite'
+  },
+  // Header
+  header: {
+    padding: '20px 20px 12px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    borderBottom: '1px solid #1a1a1f'
+  },
+  headerTitle: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 30,
+    letterSpacing: 1.5,
+    lineHeight: 1,
+    color: '#D4FF3D'
+  },
+  headerSub: {
+    fontSize: 11,
+    color: '#71717a',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginTop: 4
+  },
+  headerRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10
+  },
+  savingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    background: '#D4FF3D',
+    animation: 'pulse 1s infinite'
+  },
+  retryBtn: {
+    background: 'rgba(220, 38, 38, 0.15)',
+    border: '1px solid #dc2626',
+    color: '#fb7185',
+    padding: '6px 10px',
+    borderRadius: 8,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: 700,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6
+  },
+  retryDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    background: '#fb7185'
+  },
+  syncBanner: {
+    background: 'rgba(220, 38, 38, 0.1)',
+    borderBottom: '1px solid #7f1d1d',
+    padding: '12px 20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    fontSize: 12,
+    color: '#fecaca'
+  },
+  syncBannerWarn: {
+    background: 'rgba(251, 191, 36, 0.08)',
+    borderBottom: '1px solid #78350f',
+    padding: '12px 20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    fontSize: 12,
+    color: '#fde68a'
+  },
+  syncBannerText: {
+    flex: 1,
+    lineHeight: 1.5
+  },
+  syncBannerErr: {
+    marginTop: 4,
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: '#fda4af',
+    opacity: 0.8,
+    wordBreak: 'break-word'
+  },
+  syncBannerBtn: {
+    background: '#dc2626',
+    border: 'none',
+    color: 'white',
+    padding: '8px 12px',
+    borderRadius: 8,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: 700,
+    flexShrink: 0
+  },
+  syncBannerBtnCol: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    flexShrink: 0
+  },
+  syncBannerBtnGreen: {
+    background: '#D4FF3D',
+    border: 'none',
+    color: '#0a0a0b',
+    padding: '8px 12px',
+    borderRadius: 8,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: 700
+  },
+  syncBannerBtnGhost: {
+    background: 'transparent',
+    border: '1px solid #3f3f46',
+    color: '#a1a1aa',
+    padding: '6px 12px',
+    borderRadius: 8,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: 700
+  },
+  settingsActionRow: {
+    display: 'flex',
+    gap: 8,
+    marginBottom: 16
+  },
+  settingsActionBtn: {
+    flex: 1,
+    background: '#1a1a1f',
+    border: '1px solid #26262b',
+    color: '#f5f5f4',
+    padding: '14px 8px',
+    borderRadius: 10,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    fontWeight: 700,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6
+  },
+  settingsActionIcon: {
+    fontSize: 14,
+    color: '#D4FF3D'
+  },
+  codeBox: {
+    width: '100%',
+    minHeight: 120,
+    background: '#0a0a0b',
+    border: '1px solid #26262b',
+    color: '#D4FF3D',
+    padding: 12,
+    borderRadius: 10,
+    fontFamily: 'monospace',
+    fontSize: 11,
+    resize: 'vertical',
+    marginBottom: 12,
+    wordBreak: 'break-all',
+    boxSizing: 'border-box'
+  },
+  exportMeta: {
+    fontSize: 11,
+    color: '#71717a',
+    textAlign: 'center',
+    marginBottom: 12,
+    letterSpacing: 1
+  },
+  syncBannerBtnWarn: {
+    background: 'rgba(251, 191, 36, 0.15)',
+    border: '1px solid #b45309',
+    color: '#fbbf24',
+    padding: '8px 12px',
+    borderRadius: 8,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: 700,
+    flexShrink: 0
+  },
+  iconBtn: {
+    background: 'transparent',
+    border: '1px solid #26262b',
+    color: '#a1a1aa',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    fontSize: 18
+  },
+  main: {
+    padding: '4px 0 20px'
+  },
+  tabPad: {
+    padding: '16px 20px'
+  },
+  sectionMeta: {
+    fontSize: 11,
+    color: '#71717a',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    display: 'flex',
+    gap: 8,
+    marginBottom: 12
+  },
+  // Ranks
+  rankList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8
+  },
+  rankCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    padding: '14px 16px',
+    background: '#131316',
+    border: '1px solid #1f1f24',
+    borderRadius: 14,
+    textAlign: 'left',
+    color: '#f5f5f4',
+    width: '100%'
+  },
+  rankBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 20,
+    letterSpacing: 0,
+    flexShrink: 0
+  },
+  rankBody: {
+    flex: 1,
+    minWidth: 0
+  },
+  rankNameRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap'
+  },
+  rankName: {
+    fontSize: 16,
+    fontWeight: 600,
+    letterSpacing: 0.2
+  },
+  streakBadge: {
+    background: 'rgba(251, 146, 60, 0.15)',
+    color: '#fb923c',
+    fontSize: 10,
+    fontWeight: 700,
+    padding: '2px 6px',
+    borderRadius: 6,
+    letterSpacing: 0.5
+  },
+  provBadge: {
+    background: '#1f1f24',
+    color: '#a1a1aa',
+    fontSize: 9,
+    fontWeight: 700,
+    padding: '2px 6px',
+    borderRadius: 6,
+    letterSpacing: 1
+  },
+  rankMeta: {
+    fontSize: 12,
+    color: '#a1a1aa',
+    marginTop: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6
+  },
+  rankElo: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 32,
+    letterSpacing: 1,
+    color: '#D4FF3D'
+  },
+  winText: {
+    color: '#D4FF3D',
+    fontWeight: 600
+  },
+  lossText: {
+    color: '#fb7185',
+    fontWeight: 600
+  },
+  divider: {
+    color: '#3f3f46'
+  },
+  mutedSm: {
+    color: '#a1a1aa',
+    fontSize: 12
+  },
+  // Log
+  logSection: {
+    marginBottom: 16
+  },
+  logLabel: {
+    fontSize: 11,
+    letterSpacing: 1.8,
+    color: '#a1a1aa',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8
+  },
+  logLabelDotW: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    background: '#D4FF3D'
+  },
+  logLabelDotL: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    background: '#fb7185'
+  },
+  slotRow: {
+    display: 'flex',
+    gap: 10
+  },
+  slot: {
+    flex: 1,
+    height: 56,
+    borderRadius: 12,
+    border: '1.5px solid #26262b',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0 14px',
+    fontSize: 14,
+    fontWeight: 600,
+    transition: 'border-color 0.15s'
+  },
+  slotName: {
+    fontSize: 15,
+    fontWeight: 600
+  },
+  slotEmpty: {
+    color: '#52525b',
+    fontSize: 13,
+    letterSpacing: 1
+  },
+  slotClear: {
+    color: '#52525b',
+    fontSize: 18
+  },
+  pickerLabel: {
+    fontSize: 11,
+    letterSpacing: 1.5,
+    color: '#71717a',
+    textTransform: 'uppercase',
+    marginTop: 24,
+    marginBottom: 10
+  },
+  playerGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: 8
+  },
+  playerChip: {
+    background: '#131316',
+    border: '1px solid #26262b',
+    color: '#f5f5f4',
+    padding: '12px 8px',
+    borderRadius: 10,
+    fontSize: 13,
+    fontWeight: 600,
+    transition: 'all 0.15s'
+  },
+  playerChipWin: {
+    background: 'rgba(212,255,61,0.12)',
+    borderColor: '#D4FF3D',
+    color: '#D4FF3D'
+  },
+  playerChipLoss: {
+    background: 'rgba(251,113,133,0.12)',
+    borderColor: '#fb7185',
+    color: '#fb7185'
+  },
+  previewBox: {
+    background: '#131316',
+    border: '1px solid #26262b',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 24
+  },
+  previewLine: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '6px 0',
+    fontSize: 14
+  },
+  previewDelta: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 22,
+    color: '#D4FF3D'
+  },
+  previewDeltaNeg: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 22,
+    color: '#fb7185'
+  },
+  previewDeltaZero: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 22,
+    color: '#52525b'
+  },
+  previewDivider: {
+    height: 1,
+    background: '#26262b',
+    margin: '6px 0'
+  },
+  previewBadgeRow: {
+    display: 'flex',
+    gap: 6,
+    flexWrap: 'wrap',
+    marginBottom: 10
+  },
+  marginBadge: {
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: 700,
+    color: '#fbbf24',
+    background: 'rgba(251, 191, 36, 0.1)',
+    padding: '4px 8px',
+    borderRadius: 6,
+    display: 'inline-block',
+    textTransform: 'uppercase'
+  },
+  upsetBadge: {
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: 700,
+    color: '#a78bfa',
+    background: 'rgba(167, 139, 250, 0.12)',
+    padding: '4px 8px',
+    borderRadius: 6,
+    display: 'inline-block',
+    textTransform: 'uppercase'
+  },
+  favBadge: {
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: 700,
+    color: '#71717a',
+    background: '#1f1f24',
+    padding: '4px 8px',
+    borderRadius: 6,
+    display: 'inline-block',
+    textTransform: 'uppercase'
+  },
+  historyBadgeRow: {
+    display: 'flex',
+    gap: 6,
+    flexWrap: 'wrap',
+    marginTop: 8,
+    justifyContent: 'center'
+  },
+  historyMargin: {
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#fbbf24',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    background: 'rgba(251, 191, 36, 0.1)',
+    padding: '3px 7px',
+    borderRadius: 5
+  },
+  historyUpset: {
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#a78bfa',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    background: 'rgba(167, 139, 250, 0.12)',
+    padding: '3px 7px',
+    borderRadius: 5
+  },
+  submitBtn: {
+    width: '100%',
+    padding: '16px',
+    background: '#D4FF3D',
+    color: '#0a0a0b',
+    border: 'none',
+    borderRadius: 12,
+    fontWeight: 700,
+    fontSize: 15,
+    letterSpacing: 2,
+    marginTop: 16,
+    fontFamily: "'DM Sans', sans-serif"
+  },
+  submitBtnDisabled: {
+    background: '#1f1f24',
+    color: '#52525b'
+  },
+  // Stats
+  segmented: {
+    display: 'flex',
+    gap: 4,
+    background: '#131316',
+    padding: 4,
+    borderRadius: 12,
+    marginBottom: 20
+  },
+  segBtn: {
+    flex: 1,
+    padding: '10px',
+    background: 'transparent',
+    border: 'none',
+    color: '#71717a',
+    fontSize: 11,
+    letterSpacing: 1.5,
+    fontWeight: 600,
+    borderRadius: 8
+  },
+  segBtnActive: {
+    background: '#26262b',
+    color: '#f5f5f4'
+  },
+  h2hPickerLabel: {
+    fontSize: 11,
+    letterSpacing: 1.5,
+    color: '#71717a',
+    textTransform: 'uppercase',
+    marginBottom: 8
+  },
+  h2hPicker: {
+    display: 'flex',
+    gap: 6,
+    overflowX: 'auto',
+    paddingBottom: 8,
+    marginBottom: 16
+  },
+  h2hChip: {
+    background: '#131316',
+    border: '1px solid #26262b',
+    color: '#a1a1aa',
+    padding: '8px 14px',
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+    flexShrink: 0
+  },
+  h2hChipActive: {
+    background: '#D4FF3D',
+    borderColor: '#D4FF3D',
+    color: '#0a0a0b'
+  },
+  h2hList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10
+  },
+  h2hRow: {
+    background: '#131316',
+    border: '1px solid #1f1f24',
+    borderRadius: 12,
+    padding: 12
+  },
+  h2hOpp: {
+    fontSize: 13,
+    fontWeight: 600,
+    marginBottom: 6
+  },
+  h2hScores: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 22,
+    letterSpacing: 1,
+    marginBottom: 8
+  },
+  h2hDash: {
+    color: '#3f3f46',
+    margin: '0 6px'
+  },
+  h2hBar: {
+    display: 'flex',
+    height: 5,
+    borderRadius: 3,
+    overflow: 'hidden',
+    background: '#1f1f24'
+  },
+  h2hBarWin: {
+    background: '#D4FF3D'
+  },
+  h2hBarLoss: {
+    background: '#fb7185'
+  },
+  h2hBarEmpty: {
+    flex: 1,
+    fontSize: 10,
+    color: '#52525b',
+    textAlign: 'center',
+    lineHeight: '14px',
+    letterSpacing: 1
+  },
+  pairsList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8
+  },
+  pairRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    background: '#131316',
+    border: '1px solid #1f1f24',
+    borderRadius: 12,
+    padding: '12px 14px'
+  },
+  pairRank: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    background: '#26262b',
+    color: '#a1a1aa',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 14
+  },
+  pairBody: {
+    flex: 1
+  },
+  pairNames: {
+    fontSize: 14,
+    fontWeight: 600
+  },
+  pairMeta: {
+    fontSize: 11,
+    color: '#71717a',
+    marginTop: 2,
+    display: 'flex',
+    gap: 6,
+    alignItems: 'center'
+  },
+  pairWinRate: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 22,
+    color: '#D4FF3D'
+  },
+  // History
+  historyList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10
+  },
+  historyCard: {
+    background: '#131316',
+    border: '1px solid #1f1f24',
+    borderRadius: 14,
+    padding: 14
+  },
+  historyHead: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginBottom: 10
+  },
+  historyTime: {
+    fontSize: 11,
+    color: '#71717a',
+    letterSpacing: 1,
+    textTransform: 'uppercase'
+  },
+  historyDelta: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 16,
+    color: '#D4FF3D',
+    letterSpacing: 1
+  },
+  historyTeams: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6
+  },
+  historyTeam: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '10px 12px',
+    borderRadius: 8,
+    fontSize: 14
+  },
+  historyTeamWin: {
+    background: 'rgba(212,255,61,0.07)'
+  },
+  historyTeamLoss: {
+    background: 'rgba(251,113,133,0.07)'
+  },
+  historyTeamTag: {
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: 700,
+    padding: '3px 7px',
+    borderRadius: 4,
+    background: '#1f1f24',
+    color: '#a1a1aa'
+  },
+  undoBtn: {
+    width: '100%',
+    marginTop: 10,
+    background: 'transparent',
+    border: '1px dashed #3f3f46',
+    color: '#a1a1aa',
+    padding: '8px',
+    borderRadius: 8,
+    fontSize: 12,
+    letterSpacing: 1
+  },
+  emptyState: {
+    textAlign: 'center',
+    color: '#71717a',
+    padding: '40px 20px',
+    fontSize: 13,
+    lineHeight: 1.6
+  },
+  // Bottom nav
+  nav: {
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    maxWidth: 480,
+    margin: '0 auto',
+    background: 'rgba(10,10,11,0.92)',
+    backdropFilter: 'blur(20px)',
+    borderTop: '1px solid #1a1a1f',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    padding: '8px 8px 16px',
+    gap: 4
+  },
+  navBtn: {
+    background: 'transparent',
+    border: 'none',
+    color: '#52525b',
+    padding: '8px 4px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 2,
+    borderRadius: 8
+  },
+  navBtnActive: {
+    color: '#f5f5f4'
+  },
+  navBtnPrimary: {},
+  navBtnPrimaryActive: {
+    color: '#0a0a0b',
+    background: '#D4FF3D'
+  },
+  navIcon: {
+    fontSize: 18,
+    lineHeight: 1
+  },
+  navLabel: {
+    fontSize: 10,
+    letterSpacing: 1,
+    fontWeight: 600
+  },
+  toast: {
+    position: 'fixed',
+    bottom: 96,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    color: '#f5f5f4',
+    padding: '12px 20px',
+    borderRadius: 24,
+    fontSize: 13,
+    border: '1px solid #26262b',
+    maxWidth: '90%',
+    zIndex: 100
+  },
+  // Modal
+  modalOverlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.7)',
+    display: 'flex',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    zIndex: 200
+  },
+  modalSheet: {
+    background: '#131316',
+    width: '100%',
+    maxWidth: 480,
+    borderRadius: '20px 20px 0 0',
+    padding: '12px 20px 24px',
+    border: '1px solid #26262b',
+    borderBottom: 'none',
+    maxHeight: '85vh',
+    overflowY: 'auto'
+  },
+  modalGrabber: {
+    width: 36,
+    height: 4,
+    background: '#3f3f46',
+    borderRadius: 2,
+    margin: '0 auto 16px'
+  },
+  modalHead: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 18
+  },
+  modalName: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 30,
+    letterSpacing: 1
+  },
+  modalElo: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 38,
+    letterSpacing: 1,
+    color: '#D4FF3D'
+  },
+  modalMetaLine: {
+    fontSize: 13,
+    color: '#a1a1aa',
+    marginTop: 2,
+    display: 'flex',
+    gap: 6,
+    alignItems: 'center'
+  },
+  modalSection: {
+    marginBottom: 16
+  },
+  modalSectionTitle: {
+    fontSize: 11,
+    letterSpacing: 1.5,
+    color: '#71717a',
+    textTransform: 'uppercase',
+    marginBottom: 8
+  },
+  modalRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '10px 0',
+    borderBottom: '1px solid #1f1f24',
+    fontSize: 14
+  },
+  modalClose: {
+    width: '100%',
+    background: 'transparent',
+    border: '1px solid #26262b',
+    color: '#a1a1aa',
+    padding: '12px',
+    borderRadius: 10,
+    fontSize: 12,
+    letterSpacing: 2,
+    marginTop: 8,
+    fontWeight: 600
+  },
+  // Settings
+  settingsSyncBox: {
+    background: 'rgba(220, 38, 38, 0.1)',
+    border: '1px solid #7f1d1d',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16
+  },
+  settingsSyncTitle: {
+    fontSize: 11,
+    letterSpacing: 1.8,
+    fontWeight: 700,
+    color: '#fb7185',
+    marginBottom: 6
+  },
+  settingsSyncMsg: {
+    fontSize: 12,
+    color: '#fecaca',
+    marginBottom: 10,
+    lineHeight: 1.5,
+    fontFamily: 'monospace',
+    wordBreak: 'break-word'
+  },
+  settingsSyncBtn: {
+    background: '#dc2626',
+    border: 'none',
+    color: 'white',
+    padding: '10px',
+    borderRadius: 8,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    fontWeight: 700,
+    width: '100%'
+  },
+  settingsInfo: {
+    background: '#0a0a0b',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16
+  },
+  settingsRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '12px 14px',
+    borderBottom: '1px solid #1a1a1f',
+    fontSize: 14
+  },
+  settingsNote: {
+    fontSize: 12,
+    color: '#71717a',
+    textAlign: 'center',
+    marginBottom: 16,
+    padding: '8px 12px',
+    background: '#0a0a0b',
+    borderRadius: 8,
+    lineHeight: 1.5
+  },
+  dangerBtn: {
+    width: '100%',
+    background: 'transparent',
+    border: '1px solid #7f1d1d',
+    color: '#fb7185',
+    padding: '14px',
+    borderRadius: 10,
+    fontWeight: 700,
+    letterSpacing: 2,
+    fontSize: 12
+  },
+  dangerBtnConfirm: {
+    flex: 1,
+    background: '#dc2626',
+    border: 'none',
+    color: 'white',
+    padding: '14px',
+    borderRadius: 10,
+    fontWeight: 700,
+    letterSpacing: 2,
+    fontSize: 12
+  },
+  confirmText: {
+    fontSize: 13,
+    color: '#fb7185',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 1.5
+  },
+  confirmRow: {
+    display: 'flex',
+    gap: 8
+  },
+  // Score stepper
+  scoreSection: {
+    marginTop: 24
+  },
+  scoreRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10
+  },
+  scoreBox: {
+    flex: 1,
+    background: '#131316',
+    border: '1.5px solid #26262b',
+    borderRadius: 14,
+    padding: '12px 8px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 8,
+    transition: 'border-color 0.15s'
+  },
+  scoreLabel: {
+    fontSize: 10,
+    letterSpacing: 1.8,
+    fontWeight: 700
+  },
+  scoreNum: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 44,
+    lineHeight: 1,
+    color: '#f5f5f4'
+  },
+  scoreBtnRow: {
+    display: 'flex',
+    gap: 6,
+    width: '100%',
+    padding: '0 6px'
+  },
+  scoreBtn: {
+    flex: 1,
+    background: '#1f1f24',
+    border: 'none',
+    color: '#f5f5f4',
+    height: 36,
+    borderRadius: 8,
+    fontSize: 20,
+    lineHeight: 1,
+    fontWeight: 600
+  },
+  scoreDash: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 28,
+    color: '#3f3f46'
+  },
+  scoreHint: {
+    fontSize: 12,
+    color: '#fb7185',
+    textAlign: 'center',
+    marginTop: 10
+  },
+  // History score
+  historyScore: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 22,
+    letterSpacing: 1,
+    color: '#f5f5f4',
+    lineHeight: 1
+  },
+  historyScoreDash: {
+    color: '#52525b',
+    margin: '0 4px'
+  },
+  // Dormant section
+  dormantHeader: {
+    fontSize: 11,
+    letterSpacing: 1.8,
+    color: '#71717a',
+    textTransform: 'uppercase',
+    marginTop: 28,
+    marginBottom: 10,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '0 4px'
+  },
+  dormantCount: {
+    background: '#1f1f24',
+    color: '#a1a1aa',
+    padding: '2px 8px',
+    borderRadius: 10,
+    fontSize: 10,
+    letterSpacing: 1
+  },
+  dormantList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6
+  },
+  dormantCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '12px 14px',
+    background: '#0e0e10',
+    border: '1px solid #1a1a1f',
+    borderRadius: 10,
+    textAlign: 'left',
+    color: '#a1a1aa',
+    width: '100%'
+  },
+  dormantDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    background: '#3f3f46',
+    flexShrink: 0
+  },
+  dormantName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: 500
+  },
+  dormantElo: {
+    fontFamily: 'Bebas Neue, sans-serif',
+    fontSize: 20,
+    color: '#52525b',
+    letterSpacing: 1
+  }
+};
+
+// Animation keyframes (injected globally)
+if (typeof document !== 'undefined' && !document.getElementById('padel-keyframes')) {
+  const style = document.createElement('style');
+  style.id = 'padel-keyframes';
+  style.textContent = `
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  `;
+  document.head.appendChild(style);
+}
+
+
+// Mount with error trap
+try {
+  const _root = ReactDOM.createRoot(document.getElementById('root'));
+  _root.render(React.createElement(App));
+} catch (err) {
+  document.getElementById('root').innerHTML =
+    '<div class="boot"><div class="boot-error">' +
+    'App failed to start.<br><br>' +
+    '<span style="font-family:monospace;font-size:11px;color:#fda4af;">' +
+    (err.message || String(err)).replace(/[<>]/g, '') +
+    '</span>' +
+    '</div></div>';
+  console.error('Mount error:', err);
+}
+  </script>
+</body>
+</html>
